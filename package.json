@@ -43,6 +43,7 @@
     "through2": "^0.6.1"
   },
   "devDependencies": {
-    "mocha": "*"
+    "mocha": "*",
+    "async": "~0.9.0"
   }
 }
