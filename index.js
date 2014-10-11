@@ -11,7 +11,7 @@ var async = require('async');
 
 function minify(file, options, totalBytes, totalSavedBytes, totalFiles, cb) {
 	var imagemin = new Imagemin()
-		.src(file.contents)
+		.src(file.path)
 		.use(Imagemin.gifsicle({interlaced: options.interlaced}))
 		.use(Imagemin.jpegtran({progressive: options.progressive}))
 		.use(Imagemin.optipng({optimizationLevel: options.optimizationLevel}))
@@ -21,12 +21,13 @@ function minify(file, options, totalBytes, totalSavedBytes, totalFiles, cb) {
 		options.use.forEach(imagemin.use.bind(imagemin));
 	}
 
-	imagemin.optimize(function (err, data) {
+	imagemin.run(function (err, results) {
 		if (err) {
 			cb(new gutil.PluginError('gulp-imagemin:', err, {fileName: file.path}));
 			return;
 		}
 
+		var data = results.shift();
 		var originalSize = file.contents.length;
 		var optimizedSize = data.contents.length;
 		var saved = originalSize - optimizedSize;
@@ -76,7 +77,11 @@ var plugin = function(options) {
 			return;
 		}
 
-		minify(file, options, totalBytes, totalSavedBytes, totalFiles, cb);
+		console.log(new Date().getTime(), 'processing file sync', file.path);
+		minify(file, options, totalBytes, totalSavedBytes, totalFiles, function(err, file) {
+			console.log(new Date().getTime(), 'processing file sync', file.path);
+			cb(err, file);
+		});
 	}, function (cb) {
 		var percent = totalBytes > 0 ? (totalSavedBytes / totalBytes) * 100 : 0;
 		var msg = 'Minified ' + totalFiles + ' ';
@@ -123,7 +128,9 @@ plugin.async = function(options) {
 		var totalSavedBytes = 0;
 		var totalFiles = 0;
 		async.eachLimit(files, os.cpus().length, function (file, next) {
+			console.log(new Date().getTime(), 'processing file async', file.path);
 			minify(file, options, totalBytes, totalSavedBytes, totalFiles, function(err, file) {
+				console.log(new Date().getTime(), 'processing file async', file.path);
 				if (err) {
 					cb(new gutil.PluginError('gulp-imagemin:', err, {fileName: file.path}));
 					return;
